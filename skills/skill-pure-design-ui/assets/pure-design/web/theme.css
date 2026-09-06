@@ -1,0 +1,144 @@
+/* pure / theme.css
+   Ponte para Tailwind v4. Importar depois de tokens.css.
+   Depois disso, bg-surface, text-muted, border-border, text-13,
+   p-12, rounded-full, ease-swift e duration-3 passam a existir
+   como utilitarios, apontando para os mesmos tokens. */
+
+@import "tailwindcss";
+@import "./tokens.css";
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-dim: var(--dim);
+  --color-border: var(--border);
+  --color-border-hover: var(--border-hover);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-secondary: var(--secondary);
+
+  --color-slate-50: var(--slate-50);
+  --color-slate-100: var(--slate-100);
+  --color-slate-150: var(--slate-150);
+  --color-slate-200: var(--slate-200);
+  --color-slate-250: var(--slate-250);
+  --color-slate-300: var(--slate-300);
+  --color-slate-400: var(--slate-400);
+  --color-slate-500: var(--slate-500);
+  --color-slate-600: var(--slate-600);
+  --color-slate-700: var(--slate-700);
+  --color-slate-800: var(--slate-800);
+  --color-slate-850: var(--slate-850);
+  --color-slate-900: var(--slate-900);
+  --color-slate-950: var(--slate-950);
+
+  --color-good: var(--status-good);
+  --color-warning: var(--status-warning);
+  --color-serious: var(--status-serious);
+  --color-critical: var(--status-critical);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --color-chart-7: var(--chart-7);
+  --color-chart-8: var(--chart-8);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-display: var(--font-display);
+  /* largura do titulo: Tailwind nao tem utilitario de font-stretch por
+     token, entao quem usa font-display declara font-stretch a mao */
+
+  --text-11: var(--text-11);
+  --text-12: var(--text-12);
+  --text-13: var(--text-13);
+  --text-14: var(--text-14);
+  --text-15: var(--text-15);
+  --text-16: var(--text-16);
+  --text-18: var(--text-18);
+  --text-20: var(--text-20);
+  --text-24: var(--text-24);
+  --text-32: var(--text-32);
+  --text-40: var(--text-40);
+  --text-56: var(--text-56);
+
+  --tracking-display: var(--tracking-display);
+  --tracking-wide: var(--tracking-wide);
+  --tracking-eyebrow: var(--tracking-eyebrow);
+
+  --leading-none: var(--leading-none);
+  --leading-tight: var(--leading-tight);
+  --leading-snug: var(--leading-snug);
+  --leading-normal: var(--leading-normal);
+  --leading-relaxed: var(--leading-relaxed);
+
+  --spacing-2: var(--space-2);
+  --spacing-4: var(--space-4);
+  --spacing-6: var(--space-6);
+  --spacing-8: var(--space-8);
+  --spacing-10: var(--space-10);
+  --spacing-12: var(--space-12);
+  --spacing-16: var(--space-16);
+  --spacing-20: var(--space-20);
+  --spacing-24: var(--space-24);
+  --spacing-32: var(--space-32);
+  --spacing-40: var(--space-40);
+  --spacing-48: var(--space-48);
+  --spacing-56: var(--space-56);
+  --spacing-64: var(--space-64);
+  --spacing-80: var(--space-80);
+  --spacing-96: var(--space-96);
+
+  /* o papel vem primeiro: rounded-surface, rounded-field, rounded-media,
+     rounded-control. A escala numérica fica para componente importado. */
+  --radius-surface: var(--radius-surface);
+  --radius-field: var(--radius-field);
+  --radius-media: var(--radius-media);
+  --radius-control: var(--radius-control);
+  --radius-mark: var(--radius-mark);
+
+  --radius-0: var(--radius-0);
+  --radius-2: var(--radius-2);
+  --radius-4: var(--radius-4);
+  --radius-6: var(--radius-6);
+  --radius-8: var(--radius-8);
+  --radius-12: var(--radius-12);
+  --radius-16: var(--radius-16);
+  --radius-full: var(--radius-full);
+
+  --blur-card: var(--blur-card);
+  --blur-pill: var(--blur-pill);
+
+  --shadow-glass: var(--shadow-glass-rest);
+  --shadow-glass-hover: var(--shadow-glass-hover);
+
+  --ease-standard: var(--ease-standard);
+  --ease-out-soft: var(--ease-out-soft);
+  --ease-out-expo: var(--ease-out-expo);
+  --ease-swift: var(--ease-swift);
+
+  --animate-duration-1: var(--duration-1);
+  --animate-duration-2: var(--duration-2);
+  --animate-duration-3: var(--duration-3);
+  --animate-duration-4: var(--duration-4);
+  --animate-duration-5: var(--duration-5);
+  --animate-duration-6: var(--duration-6);
+
+  /* interacao: alvo, foco, campo e ancora viram min-w-hit, size-field,
+     text-field e scroll-mt-anchor */
+  --spacing-hit: var(--hit-min);
+  --spacing-hit-touch: var(--hit-min-touch);
+  --spacing-field: var(--field-height);
+  --spacing-anchor: var(--scroll-offset);
+  --text-field: var(--text-field);
+
+  --container-sm: var(--container-sm);
+  --container-md: var(--container-md);
+  --container-lg: var(--container-lg);
+  --container-xl: var(--container-xl);
+}

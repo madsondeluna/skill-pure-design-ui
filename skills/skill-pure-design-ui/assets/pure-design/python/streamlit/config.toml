@@ -1,0 +1,23 @@
+# pure, tema Streamlit
+# Copiar para .streamlit/config.toml na raiz do app.
+# O bloco [theme] cobre o modo claro. Streamlit nao aceita dois temas
+# no mesmo config, entao o modo escuro entra pelo CSS de app.css,
+# que reage a prefers-color-scheme.
+
+[theme]
+base = "light"
+primaryColor = "#3e5c76"
+backgroundColor = "#f4f6f9"
+secondaryBackgroundColor = "#ebeef3"
+textColor = "#0d1321"
+font = "sans serif"
+
+[theme.sidebar]
+backgroundColor = "#ebeef3"
+secondaryBackgroundColor = "#e1e5ec"
+
+[server]
+maxUploadSize = 500
+
+[browser]
+gatherUsageStats = false

@@ -1,0 +1,1553 @@
+/* pure / agent.css
+   A camada de agente: os desenhos que so aparecem quando quem escreve na
+   tela e um modelo, nao uma pessoa. Rastro de raciocinio, texto que chega
+   pedaco a pedaco, chamada de ferramenta, pedido de aprovacao, tabela que
+   o agente propoe reescrever.
+
+   Nenhum valor literal de cor aqui: tudo vem de tokens.css. Importar
+   depois de tokens.css e patterns.css, que e de onde vem .pill, .tag,
+   .status, .field, .input, .num, .empty, .skeleton, .hit e o anel de foco.
+
+   Tres regras governam o arquivo inteiro:
+
+   1. O raio segue o papel. Cartao e --radius-surface, linha e trecho
+      aninhados sao --radius-field, midia e codigo sao --radius-media,
+      controle e --radius-control. Um filho nunca arredonda mais que o pai.
+
+   2. So transform e opacity animam. Nada aqui transiciona altura, largura
+      ou margem, o que exclui a abertura por grid-template-rows e o
+      medidor que cresce por width. O corpo do rastro entra e sai do fluxo
+      com [hidden] e o conteudo assenta com fade; o medidor usa scaleX.
+
+   3. Estado e cor semantica, serie e cor de grafico. Uma tarefa que falha
+      usa --status-critical. Uma linha de grafico usa --chart-n. As duas
+      familias nunca trocam de lugar. */
+
+/* ---------- 1. carga ----------
+
+   Tres formas para a mesma espera: grade de pixels, pontos e orbita.
+   O rotulo diz o que esta acontecendo, o tempo decorrido diz ha quanto.
+   O tempo e mono porque e numero que muda: fonte proporcional faria a
+   linha inteira tremer a cada decimo de segundo. */
+
+.loader {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-10);
+  color: var(--muted);
+  font-size: var(--text-15);
+}
+
+.loader-time {
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+/* grade de pixels: nove celulas acendendo fora de fase. A onda e um
+   atraso por celula, nao uma animacao por celula. */
+.loader-grid {
+  display: grid;
+  grid-template-columns: repeat(3, var(--pixel));
+  gap: var(--nudge-1);
+}
+.loader-grid i {
+  display: block;
+  width: var(--pixel);
+  height: var(--pixel);
+  border-radius: var(--radius-0);
+  background: currentColor;
+  opacity: 0.2;
+  animation: pure-pixel var(--duration-6) var(--ease-standard) infinite;
+}
+.loader-grid i:nth-child(1) { animation-delay: 0ms; }
+.loader-grid i:nth-child(2) { animation-delay: 60ms; }
+.loader-grid i:nth-child(3) { animation-delay: 120ms; }
+.loader-grid i:nth-child(4) { animation-delay: 60ms; }
+.loader-grid i:nth-child(5) { animation-delay: 120ms; }
+.loader-grid i:nth-child(6) { animation-delay: 180ms; }
+.loader-grid i:nth-child(7) { animation-delay: 120ms; }
+.loader-grid i:nth-child(8) { animation-delay: 180ms; }
+.loader-grid i:nth-child(9) { animation-delay: 240ms; }
+
+/* pontos: escala vertical, nao deslocamento. Um ponto que sobe e desce
+   por translateY empurra a linha de base do texto ao lado. */
+.loader-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--nudge-2);
+}
+.loader-dots i {
+  display: block;
+  width: var(--nudge-3);
+  height: var(--nudge-3);
+  border-radius: var(--radius-circle);
+  background: currentColor;
+  animation: pure-bounce var(--duration-6) var(--ease-standard) infinite;
+}
+.loader-dots i:nth-child(2) { animation-delay: 100ms; }
+.loader-dots i:nth-child(3) { animation-delay: 200ms; }
+
+/* orbita: o mesmo anel do estado de carga de patterns.css, em tamanho
+   de rotulo */
+.loader-orbit {
+  display: block;
+  width: var(--space-12);
+  height: var(--space-12);
+  border: var(--stroke) solid var(--border);
+  border-top-color: currentColor;
+  border-radius: var(--radius-circle);
+  animation: pure-spin var(--duration-6) linear infinite;
+}
+
+/* o brilho que atravessa o rotulo enquanto ele espera. A varredura e um
+   pseudo elemento que anda por transform, nao background-position: assim
+   ela compoe fora da thread principal e nao repinta o texto. */
+.loader-label {
+  position: relative;
+  overflow: hidden;
+  color: var(--muted);
+}
+.loader-label::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--bg) 50%,
+    transparent 100%
+  );
+  opacity: 0.55;
+  animation: pure-sweep var(--duration-6) var(--ease-standard) infinite;
+}
+
+/* ---------- 2. rastro de raciocinio ----------
+
+   Um resumo sempre visivel e um corpo que abre. A cabeca e um botao de
+   verdade, com aria-expanded, porque o teclado precisa dela.
+
+   A abertura NAO anima altura. O corpo sai do fluxo com [hidden] e, ao
+   voltar, cada passo assenta com fade-up escalonado. A caixa salta uma
+   vez; o conteudo chega em ordem. Animar grid-template-rows daria a
+   transicao continua ao custo de layout a cada quadro, e a linguagem
+   nao paga esse preco. */
+
+.trace {
+  border-radius: var(--radius-surface);
+}
+
+.trace-head {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: var(--hit-min);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: var(--text-12);
+  cursor: pointer;
+  transition: color var(--duration-3) var(--ease-standard);
+}
+.trace-head:hover { color: var(--text); }
+
+.trace-head .chev {
+  display: block;
+  width: var(--space-8);
+  height: var(--space-8);
+  border-right: var(--hairline) solid currentColor;
+  border-bottom: var(--hairline) solid currentColor;
+  transform: rotate(45deg);
+  transition: transform var(--duration-3) var(--ease-out-soft);
+}
+.trace-head[aria-expanded="true"] .chev { transform: rotate(-135deg); }
+
+.trace-body {
+  margin-top: var(--space-12);
+  padding-left: var(--rail);
+  border-left: var(--hairline) solid var(--border);
+}
+
+/* o passo carrega a marca de concluido na calha, o nome no corpo e o
+   numero apurado no fim. O numero e mono; o nome, nao. */
+.trace-step {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-8);
+  padding: var(--space-6) 0;
+  font-size: var(--text-15);
+  color: var(--text);
+  animation: pure-fade-up var(--duration-5) var(--ease-out-soft) both;
+}
+.trace-step::before {
+  content: "";
+  flex: none;
+  width: var(--space-10);
+  height: var(--space-6);
+  border-left: var(--stroke) solid var(--status-good);
+  border-bottom: var(--stroke) solid var(--status-good);
+  transform: rotate(-45deg) translateY(var(--nudge-1));
+}
+.trace-step[data-state="running"]::before {
+  border-color: var(--secondary);
+  transform: none;
+  width: var(--nudge-3);
+  height: var(--nudge-3);
+  border: var(--stroke) solid var(--secondary);
+  border-radius: var(--radius-circle);
+}
+.trace-step .meta {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  color: var(--muted);
+}
+
+/* ---------- 3. texto que chega ----------
+
+   Cada pedaco entra com opacidade e um empurrao de 2px, escalonado por
+   --i vezes --stream-step. O original desfocava o pedaco na entrada;
+   filter: blur repinta a caixa a cada quadro e nao compoe, entao aqui a
+   entrada e opacidade mais nudge. O efeito le igual, o custo nao.
+
+   A regiao inteira e aria-live="polite": leitor de tela anuncia o texto
+   novo sem interromper o que ja estava sendo lido. */
+
+.stream {
+  min-width: 0;
+  font-size: var(--text-15);
+  line-height: var(--leading-normal);
+  color: var(--text);
+  max-width: var(--measure-wide);
+}
+.stream .tok {
+  display: inline-block;
+  animation: pure-token var(--duration-4) var(--ease-out-soft) both;
+  animation-delay: calc(var(--i, 0) * var(--stream-step));
+}
+
+.caret {
+  display: inline-block;
+  width: var(--hairline);
+  height: 1em;
+  vertical-align: text-bottom;
+  background: var(--text);
+  animation: pure-caret var(--caret-blink) step-end infinite;
+}
+
+/* fontes citadas: chip com marca de origem e dominio em mono */
+.sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+.source {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: var(--hit-min);
+  padding: var(--space-4) var(--space-10);
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  font-size: var(--text-12);
+  color: var(--text);
+  transition:
+    border-color var(--duration-3) var(--ease-standard),
+    background-color var(--duration-3) var(--ease-standard);
+}
+.source:hover { border-color: var(--border-hover); background: var(--surface-hover); }
+.source .host {
+  font-family: var(--font-mono);
+  color: var(--muted);
+}
+
+/* continuacoes: sugestao de proxima pergunta. Alinhadas a esquerda,
+   uma por linha, porque sao frases e nao rotulos. */
+.followups {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-8);
+}
+.followup {
+  min-height: var(--hit-min);
+  padding: var(--space-6) var(--space-12);
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: var(--text-12);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--duration-3) var(--ease-standard),
+    color var(--duration-3) var(--ease-standard);
+}
+.followup:hover { border-color: var(--border-hover); color: var(--text); }
+
+/* ---------- 4. pedido de aprovacao ----------
+
+   A pergunta que o agente faz antes de agir. Titulo e pergunta de
+   verdade, terminada em interrogacao, e as opcoes sao radio: uma
+   escolha, nome acessivel proprio, navegacao por seta. */
+
+.ask {
+  padding: var(--space-20);
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+}
+.ask-title {
+  font-size: var(--text-15);
+  color: var(--text);
+  margin-bottom: var(--space-16);
+}
+.ask-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.ask-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-10);
+  min-height: var(--hit-min-touch);
+  padding: var(--space-10) var(--space-12);
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-field);
+  font-size: var(--text-15);
+  color: var(--text);
+  cursor: pointer;
+  transition:
+    border-color var(--duration-3) var(--ease-standard),
+    background-color var(--duration-3) var(--ease-standard);
+}
+.ask-option:hover { border-color: var(--border-hover); }
+.ask-option:has(input:checked) {
+  border-color: var(--text);
+  background: var(--surface-hover);
+}
+
+/* ---------- 5. chamadas de ferramenta ----------
+
+   Uma linha por chamada: verbo, alvo e argumento. O verbo e linguagem,
+   o argumento e dado, entao o argumento e mono. O agrupamento no topo
+   conta quantas foram, para que a lista fechada ainda informe. */
+
+.calls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.call {
+  display: flex;
+  align-items: center;
+  gap: var(--space-10);
+  min-height: var(--hit-min);
+  padding: var(--space-4) var(--space-8);
+  border-radius: var(--radius-field);
+  font-size: var(--text-12);
+  color: var(--text);
+  transition: background-color var(--duration-3) var(--ease-standard);
+}
+.call:hover { background: var(--surface-hover); }
+.call .verb { flex: none; }
+.call .arg {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  padding: var(--nudge-1) var(--space-8);
+  border-radius: var(--radius-field);
+  background: var(--dim);
+  font-family: var(--font-mono);
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* edicoes de arquivo: nome em mono, saldo de linhas em verde e vermelho
+   de estado. O saldo e sempre um par, mesmo quando um dos lados e zero,
+   para a coluna nao dancar entre linhas. */
+.edits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+.edit {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: var(--hit-min);
+  padding: var(--space-4) var(--space-10);
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-field);
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  color: var(--text);
+}
+.edit .add { color: var(--status-good); }
+.edit .del { color: var(--status-critical); }
+
+/* ---------- 6. linhas de tarefa ----------
+
+   Estado vem de --status-*, nunca da paleta de grafico. Quatro estados,
+   quatro cores, e o glifo na calha repete a informacao em forma, porque
+   cor sozinha nao e sinal acessivel. */
+
+.tasks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+.task-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  min-height: var(--hit-min-touch);
+  padding: var(--space-8) var(--space-16);
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  font-size: var(--text-15);
+  color: var(--text);
+  transition:
+    border-color var(--duration-3) var(--ease-standard),
+    background-color var(--duration-3) var(--ease-standard);
+}
+.task-row:hover { border-color: var(--border-hover); background: var(--surface-hover); }
+
+.task-row .glyph {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--space-20);
+  height: var(--space-20);
+  border-radius: var(--radius-circle);
+  border: var(--stroke) solid currentColor;
+  font-family: var(--font-mono);
+  font-size: var(--text-11);
+}
+.task-row[data-state="done"]    .glyph { color: var(--status-good); }
+/* o glyph carrega digito quando a tarefa esta na fila, e digito e texto:
+   piso de 4,5, entao muted. Nao sobrou nenhum uso de secondary em tinta
+   nesta camada; ele so aparece como cor de borda. */
+.task-row[data-state="running"] .glyph { color: var(--muted); }
+.task-row[data-state="waiting"] .glyph { color: var(--status-warning); }
+.task-row[data-state="failed"]  .glyph { color: var(--status-critical); }
+
+.task-row .count {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+/* subtarefas: mesma calha, um degrau de recuo, tipo um passo menor */
+.task-sub {
+  padding-left: calc(var(--space-16) + var(--space-20) + var(--space-12));
+}
+.task-sub .task-row {
+  border: 0;
+  background: none;
+  min-height: var(--hit-min);
+  font-size: var(--text-12);
+  color: var(--muted);
+}
+
+/* ---------- 7. painel de conversa ----------
+
+   Abas de verdade: role="tablist", role="tab" com aria-selected, seta
+   esquerda e direita movendo o foco. A fala do usuario e um balao de
+   vidro alinhado a direita; a resposta do agente e prosa alinhada a
+   esquerda, sem balao, porque ela pode ficar longa. */
+
+.thread {
+  display: flex;
+  flex-direction: column;
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.tabs {
+  display: flex;
+  gap: var(--space-4);
+  padding: var(--space-8);
+  border-bottom: var(--hairline) solid var(--border);
+}
+.tab {
+  min-height: var(--hit-min);
+  padding: var(--space-4) var(--space-12);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: var(--text-12);
+  cursor: pointer;
+  transition:
+    color var(--duration-3) var(--ease-standard),
+    background-color var(--duration-3) var(--ease-standard);
+}
+.tab:hover { color: var(--text); }
+.tab[aria-selected="true"] { color: var(--text); background: var(--dim); }
+
+.msgs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  padding: var(--space-16);
+}
+.msg-user {
+  align-self: flex-end;
+  min-width: 0;
+  max-width: var(--measure-prose);
+  padding: var(--space-8) var(--space-16);
+  border-radius: var(--radius-surface);
+  background: var(--dim);
+  font-size: var(--text-15);
+  color: var(--text);
+}
+.msg-agent {
+  align-self: flex-start;
+  min-width: 0;
+  max-width: var(--measure-wide);
+  font-size: var(--text-15);
+  line-height: var(--leading-normal);
+  color: var(--text);
+}
+/* a etapa que gerou a resposta, em mono, acima dela */
+.msg-agent .step {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+  margin-bottom: var(--space-4);
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  color: var(--muted);
+}
+.msg-agent .step b {
+  color: var(--muted);
+  font-weight: var(--weight-regular);
+}
+
+/* ---------- 8. barra de prompt ----------
+
+   O campo e --text-field, 16px, e nao 12: abaixo disso o iOS da zoom no
+   foco. A barra nunca bloqueia digitacao nem colagem, e o menu de fonte
+   abre por @ enquanto o de comando abre por /. */
+
+.composer {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-8);
+  padding: var(--space-8);
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+  transition: border-color var(--duration-3) var(--ease-standard);
+}
+.composer:focus-within { border-color: var(--border-hover); }
+.composer-field {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--field-height);
+  padding: var(--space-8) var(--space-8);
+  border: 0;
+  background: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--text-field);
+  line-height: var(--leading-snug);
+  resize: none;
+}
+.composer-field:focus { outline: none; }
+.composer-field::placeholder { color: var(--muted); }
+.composer-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+/* o menu que @ e / abrem. Item com chave e descricao: a chave e o que
+   se digita, entao e mono; a descricao e linguagem. */
+.menu {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4);
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+  box-shadow: var(--shadow-glass-rest);
+  animation: pure-fade-scale var(--duration-4) var(--ease-out-expo) both;
+}
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  min-height: var(--hit-min-touch);
+  padding: var(--space-8) var(--space-12);
+  border: 0;
+  border-radius: var(--radius-field);
+  background: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--text-12);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--duration-2) var(--ease-standard);
+}
+.menu-item:hover,
+.menu-item[aria-selected="true"] { background: var(--surface-hover); }
+.menu-item .cmd { font-family: var(--font-mono); flex: none; }
+.menu-item .d { color: var(--muted); }
+.menu-item .end { margin-left: auto; color: var(--muted); }
+
+/* ditado: barras que sobem com a voz. scaleY, com origem embaixo, para
+   nao empurrar a linha de base do que esta ao lado. */
+.dictate {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: var(--nudge-1);
+  height: var(--space-12);
+}
+.dictate i {
+  display: block;
+  width: var(--nudge-1);
+  height: 100%;
+  transform-origin: bottom;
+  border-radius: var(--radius-control);
+  background: currentColor;
+  animation: pure-eq var(--duration-6) var(--ease-standard) infinite;
+}
+.dictate i:nth-child(2) { animation-delay: 80ms; }
+.dictate i:nth-child(3) { animation-delay: 160ms; }
+.dictate i:nth-child(4) { animation-delay: 240ms; }
+
+/* ---------- 9. sugestao com confianca ----------
+
+   A confianca e discreta, tres degraus, nao um numero continuo, porque
+   um modelo nao sabe a diferenca entre 71% e 74%. O degrau tem rotulo em
+   texto ao lado: barra sozinha nao e sinal acessivel.
+
+   Onde a grandeza for mesmo continua, .meter cresce por scaleX com
+   origem a esquerda, nunca por width. */
+
+.suggest {
+  padding: var(--space-16);
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+}
+.suggest-title {
+  font-size: var(--text-15);
+  color: var(--text);
+}
+.suggest-body {
+  margin-top: var(--space-8);
+  font-size: var(--text-15);
+  line-height: var(--leading-normal);
+  color: var(--muted);
+}
+/* valor que o agente vai usar: dado, entao mono e com fundo proprio */
+.suggest-body code,
+.arg-inline {
+  padding: var(--nudge-1) var(--space-6);
+  border-radius: var(--radius-mark);
+  background: var(--dim);
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  color: var(--text);
+}
+
+.suggest-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  margin-top: var(--space-16);
+}
+.suggest-foot .spacer { margin-left: auto; }
+
+.confidence {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  font-size: var(--text-12);
+  color: var(--muted);
+}
+.confidence .bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: var(--nudge-1);
+}
+.confidence .bars i {
+  display: block;
+  width: var(--nudge-2);
+  height: var(--space-10);
+  border-radius: var(--radius-mark);
+  background: var(--border);
+}
+.confidence[data-level="1"] .bars i:nth-child(-n + 1),
+.confidence[data-level="2"] .bars i:nth-child(-n + 2),
+.confidence[data-level="3"] .bars i:nth-child(-n + 3) { background: var(--status-good); }
+.confidence[data-level="1"] .bars i:nth-child(-n + 1) { background: var(--status-serious); }
+.confidence[data-level="2"] .bars i:nth-child(-n + 2) { background: var(--status-warning); }
+
+.meter {
+  height: var(--meter);
+  border-radius: var(--radius-control);
+  background: var(--dim);
+  overflow: hidden;
+}
+.meter i {
+  display: block;
+  height: 100%;
+  transform-origin: left;
+  transform: scaleX(var(--v, 0));
+  background: var(--muted);
+  transition: transform var(--duration-5) var(--ease-out-soft);
+}
+
+/* alternativa descartada: o motivo fica ao lado, nao embaixo */
+.alt {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  min-height: var(--hit-min-touch);
+  padding: var(--space-8) 0;
+  border-top: var(--hairline) solid var(--border);
+  font-size: var(--text-15);
+  color: var(--muted);
+}
+.alt .why {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  color: var(--muted);
+}
+
+/* ---------- 10. trechos recuperados ----------
+
+   O que o modelo leu antes de responder, com a fonte de cada pedaco. O
+   tamanho do trecho fica em mono e alinhado a direita: e numero. */
+
+.chunks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+.chunk {
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-field);
+  background: var(--surface);
+  overflow: hidden;
+}
+.chunk-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  min-height: var(--hit-min-touch);
+  padding: var(--space-8) var(--space-16);
+  border-bottom: var(--hairline) solid var(--border);
+  font-size: var(--text-15);
+  color: var(--text);
+}
+.chunk-head .size {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.chunk-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--space-16);
+  font-size: var(--text-15);
+  line-height: var(--leading-normal);
+  color: var(--muted);
+}
+.chunk-src {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: var(--hit-min);
+  margin-top: var(--space-12);
+  padding: var(--space-4) var(--space-10);
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-control);
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  color: var(--text);
+}
+.chunk-src .kind {
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-mark);
+  background: var(--dim);
+  color: var(--muted);
+}
+
+/* ---------- 11 a 13. tabelas ----------
+
+   Uma base para as tres: proposta de edicao, grade de registros e lista
+   filtrada. Cabecalho em mono, celula em prosa, numero comparavel com
+   tabular-nums via .num de patterns.css. */
+
+.grid-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-15);
+}
+.grid-table th {
+  padding: var(--space-8) var(--space-12);
+  border-bottom: var(--hairline) solid var(--border);
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  font-weight: var(--weight-regular);
+  letter-spacing: var(--tracking-wide);
+  color: var(--muted);
+  text-align: left;
+  white-space: nowrap;
+}
+.grid-table td {
+  padding: var(--space-10) var(--space-12);
+  border-bottom: var(--hairline) solid var(--border);
+  color: var(--text);
+  vertical-align: middle;
+}
+.grid-table tbody tr {
+  transition: background-color var(--duration-2) var(--ease-standard);
+}
+.grid-table tbody tr:hover { background: var(--surface-hover); }
+
+/* edicao proposta: a linha que sai e a que entra ganham tinta de estado
+   e um tom derivado dela por color-mix. Nenhuma cor nova entra na
+   linguagem para isto. */
+.grid-table tr[data-diff="removed"] {
+  background: color-mix(in oklab, var(--status-critical) 12%, transparent);
+}
+/* o texto fica em --text: o tom da linha e o risco ja dizem "removida",
+   e status-critical a 15px ficava em 2,95 sobre a linha tingida. Cor de
+   estado vai na tinta da linha (o tint), nunca na tinta do texto corrido. */
+.grid-table tr[data-diff="removed"] td { color: var(--text); }
+.grid-table tr[data-diff="added"] {
+  background: color-mix(in oklab, var(--status-good) 12%, transparent);
+}
+.grid-table tr[data-diff="added"] td { color: var(--text); }
+.strike { text-decoration: line-through; }
+
+/* chips de filtro: rotulo mais contagem. A contagem e mono e fica dentro
+   do chip, nao ao lado, para o alvo de toque ser um so. */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+.filter {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: var(--hit-min);
+  padding: var(--space-4) var(--space-12);
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: var(--text-12);
+  cursor: pointer;
+  transition:
+    color var(--duration-3) var(--ease-standard),
+    border-color var(--duration-3) var(--ease-standard),
+    background-color var(--duration-3) var(--ease-standard);
+}
+.filter:hover { color: var(--text); border-color: var(--border-hover); }
+.filter[aria-pressed="true"] {
+  color: var(--text);
+  border-color: var(--text);
+  background: var(--surface-hover);
+}
+.filter .n {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.filter[aria-pressed="true"] .n { color: var(--muted); }
+
+/* ---------- 14. navegacao de espaco ----------
+
+   Sentence case tambem aqui: o grupo se chama Workspace, nao WORKSPACE.
+   Caixa alta e proibida na linguagem, e um cabecalho de grupo nao e
+   excecao. O atalho fica em mono, dentro de uma tecla. */
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-8);
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+}
+.side-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  min-height: var(--hit-min-touch);
+  padding: var(--space-8);
+  font-size: var(--text-15);
+  color: var(--text);
+}
+/* a marca do espaco e um quadrado de rotulo, nao um retrato: .avatar de
+   patterns.css e --photo-sm e existe para foto */
+.side-head .mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--space-32);
+  height: var(--space-32);
+  border-radius: var(--radius-field);
+  background: var(--dim);
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  color: var(--text);
+}
+.side-head .name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: var(--leading-snug);
+}
+.side-head .sub {
+  font-size: var(--text-12);
+  color: var(--muted);
+}
+.side-group {
+  padding: var(--space-16) var(--space-8) var(--space-4);
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  letter-spacing: var(--tracking-eyebrow);
+  color: var(--muted);
+}
+.side-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  min-height: var(--hit-min-touch);
+  padding: var(--space-6) var(--space-8);
+  border-radius: var(--radius-field);
+  color: var(--muted);
+  font-size: var(--text-15);
+  cursor: pointer;
+  transition:
+    color var(--duration-2) var(--ease-standard),
+    background-color var(--duration-2) var(--ease-standard);
+}
+.side-item:hover { color: var(--text); background: var(--surface-hover); }
+.side-item[aria-current="page"] { color: var(--text); background: var(--dim); }
+.side-item .badge {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.key {
+  display: inline-grid;
+  place-items: center;
+  min-width: var(--hit-min);
+  min-height: var(--hit-min);
+  padding: 0 var(--space-6);
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-mark);
+  font-family: var(--font-mono);
+  font-size: var(--text-11);
+  color: var(--muted);
+}
+
+/* ---------- 15. paleta de comando ----------
+
+   Campo em cima, resultados embaixo, e o vazio nunca e uma pagina sem
+   saida: .empty de patterns.css entra no lugar da lista e oferece o
+   proximo passo. A opcao ativa e marcada por aria-selected, e o campo
+   mantem o foco enquanto a seta anda pela lista. */
+
+.palette {
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+  overflow: hidden;
+}
+.palette-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  padding: 0 var(--space-16);
+  border-bottom: var(--hairline) solid var(--border);
+}
+.palette-field input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--field-height-touch);
+  border: 0;
+  background: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: var(--text-field);
+}
+.palette-field input:focus { outline: none; }
+.palette-field input::placeholder { color: var(--muted); }
+.palette-list {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-4);
+  max-height: 40vh;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.palette-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  min-height: var(--hit-min-touch);
+  padding: var(--space-6) var(--space-12);
+  border-radius: var(--radius-field);
+  font-size: var(--text-15);
+  color: var(--text);
+  cursor: pointer;
+  transition: background-color var(--duration-2) var(--ease-standard);
+}
+.palette-item:hover,
+.palette-item[aria-selected="true"] { background: var(--surface-hover); }
+
+/* ---------- 16. cartao de insight ----------
+
+   Aqui as duas familias de cor se encontram, e e onde e mais facil
+   errar. A variacao (mais 1,15%, menos 4,41%) e ESTADO: --status-good e
+   --status-critical. A linha do grafico e SERIE: --chart-1 e --chart-2,
+   na ordem dos slots. Um ponto colorido ao lado do nome liga a metrica
+   a sua linha; ele usa a cor de serie, nunca a de estado. */
+
+.insight {
+  padding: var(--space-16);
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+}
+.insight-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  letter-spacing: var(--tracking-eyebrow);
+  color: var(--muted);
+}
+.insight-pager {
+  margin-left: auto;
+  display: flex;
+  gap: var(--space-4);
+}
+.insight-lede {
+  margin-top: var(--space-12);
+  font-size: var(--text-15);
+  line-height: var(--leading-normal);
+  color: var(--text);
+}
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--photo-sm), 1fr));
+  gap: var(--space-16);
+  margin-top: var(--space-16);
+  padding: var(--space-16);
+  border-radius: var(--radius-field);
+  background: var(--bg);
+}
+.metric .name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  font-size: var(--text-12);
+  color: var(--muted);
+}
+.metric .name i {
+  display: block;
+  width: var(--nudge-3);
+  height: var(--nudge-3);
+  border-radius: var(--radius-circle);
+}
+.metric .v {
+  margin-top: var(--space-6);
+  font-family: var(--font-mono);
+  font-size: var(--text-20);
+  font-variant-numeric: tabular-nums;
+}
+.metric .abs {
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.up   { color: var(--status-good); }
+.down { color: var(--status-critical); }
+
+/* ---------- 17. bloco de codigo ----------
+
+   Codigo aqui e tipografia, nao dado: o realce usa niveis de tinta, nao
+   matizes. Identificador e literal ficam em --text, palavra reservada e
+   chamada em --muted com peso medio, e comentario e numero de linha em
+   --secondary. Nenhum slot da paleta de grafico entra: aqueles oito
+   carregam identidade de serie, e uma palavra reservada nao e serie. */
+
+.code {
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-media);
+  background: var(--surface);
+  overflow: hidden;
+}
+.code-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  min-height: var(--hit-min-touch);
+  padding: var(--space-8) var(--space-16);
+  border-bottom: var(--hairline) solid var(--border);
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  color: var(--text);
+}
+.code-head .lang { color: var(--muted); }
+.code-head .end { margin-left: auto; }
+.code-body {
+  margin: 0;
+  padding: var(--space-12) 0;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  line-height: var(--leading-relaxed);
+}
+.code-line {
+  display: flex;
+  gap: var(--space-16);
+  padding: 0 var(--space-16);
+  white-space: pre;
+  animation: pure-token var(--duration-4) var(--ease-out-soft) both;
+  animation-delay: calc(var(--i, 0) * var(--stream-step));
+}
+.code-line .ln {
+  flex: none;
+  width: var(--gutter-code);
+  text-align: right;
+  color: var(--muted);
+  user-select: none;
+}
+.tok-key { color: var(--muted); font-weight: var(--weight-medium); }
+.tok-fn  { color: var(--muted); }
+.tok-str { color: var(--text); }
+.tok-com { color: var(--muted); }
+
+/* ---------- 18. inspetor ----------
+
+   O agente mexe nas propriedades de um objeto. Todo campo e numero, e
+   numero editavel e mono com tabular-nums, senao o cursor pula de coluna
+   a cada digito. A unidade fica dentro do campo, nao ao lado. */
+
+.inspector {
+  padding: var(--space-12);
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+}
+.inspect-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  min-height: var(--hit-min-touch);
+  padding: 0 var(--space-4);
+  font-size: var(--text-15);
+  color: var(--text);
+}
+.inspect-head .end { margin-left: auto; }
+.inspect-group {
+  margin-top: var(--space-12);
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  letter-spacing: var(--tracking-eyebrow);
+  color: var(--muted);
+}
+.inspect-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--photo-sm), 1fr));
+  gap: var(--space-8);
+  margin-top: var(--space-8);
+}
+.numfield {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: var(--field-height);
+  padding: 0 var(--space-10);
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-field);
+  background: var(--bg);
+  transition: border-color var(--duration-3) var(--ease-standard);
+}
+.numfield:focus-within { border-color: var(--border-hover); }
+.numfield .lbl {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  color: var(--muted);
+}
+.numfield input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--text-field);
+  font-variant-numeric: tabular-nums;
+}
+.numfield input:focus { outline: none; }
+.numfield .unit {
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  color: var(--muted);
+}
+
+/* controle segmentado: uma escolha entre poucas, sempre visiveis */
+.seg {
+  display: inline-flex;
+  padding: var(--nudge-1);
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--dim);
+}
+.seg button {
+  min-height: var(--hit-min);
+  padding: var(--space-4) var(--space-12);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: var(--text-12);
+  cursor: pointer;
+  transition:
+    color var(--duration-2) var(--ease-standard),
+    background-color var(--duration-2) var(--ease-standard);
+}
+.seg button:hover { color: var(--text); }
+.seg button[aria-pressed="true"] {
+  color: var(--text);
+  background: var(--surface);
+}
+
+/* ---------- 19. acoes sobre a selecao ----------
+
+   Um trecho marcado e uma barra que oferece o que fazer com ele. A
+   marcacao usa a mesma tinta de ::selection da linguagem invertida em
+   tom baixo, e a barra entra com fade-scale, sem deslocamento. */
+
+.selection {
+  min-width: 0;
+  font-size: var(--text-15);
+  line-height: var(--leading-normal);
+  color: var(--text);
+  max-width: var(--measure-wide);
+}
+.selection mark {
+  background: color-mix(in oklab, var(--accent) 30%, transparent);
+  color: var(--text);
+  border-radius: var(--radius-mark);
+}
+.selection-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-12);
+  padding: var(--space-4);
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  box-shadow: var(--shadow-glass-rest);
+  animation: pure-fade-scale var(--duration-4) var(--ease-out-expo) both;
+}
+.selection-bar button {
+  min-height: var(--hit-min);
+  padding: var(--space-4) var(--space-10);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: var(--text-12);
+  cursor: pointer;
+  transition:
+    color var(--duration-2) var(--ease-standard),
+    background-color var(--duration-2) var(--ease-standard);
+}
+.selection-bar button:hover { color: var(--text); background: var(--surface-hover); }
+.selection-bar .sep {
+  width: var(--hairline);
+  align-self: stretch;
+  background: var(--border);
+}
+
+/* ---------- 20. fluxo de agente ----------
+
+   O editor de fluxo: gatilho, passos e ramos de decisao. E o vigesimo
+   componente da fonte e o unico que faltava aqui, e a falta tinha
+   consequencia: um agente que decide entre dois caminhos precisa mostrar
+   os dois, e sem componente cada projeto desenhava o ramo com uma seta
+   de fonte de icone e uma borda inventada.
+
+   O desenho e uma COLUNA, nao um canvas. Um canvas de arrastar precisa
+   de posicao absoluta por no, de medida por quadro e de javascript, e
+   nada disso atravessa para CSS puro. A coluna cobre o que o fluxo
+   precisa dizer: a ordem dos passos, onde ele se parte em dois e o que
+   cada ramo faz. O que ela nao cobre e o rearranjo livre, e isso esta
+   declarado em vez de simulado.
+
+   A LINHA entre dois passos e uma borda de pseudo-elemento, nao uma
+   caixa: uma caixa entre nos entra na contagem de filhos e quebra o
+   :nth-child das regras de ramo. O gatilho nao tem linha acima e o
+   ultimo passo nao tem linha abaixo, e as duas excecoes sao :first-child
+   e :last-child, nao classes na marcacao.
+
+   COR: o tipo do no e ESTADO, entao ele sai de --status-*, e o rotulo
+   do ramo repete a condicao em texto. Um fluxo em que "sim" e "nao" se
+   distinguem so por cor e um fluxo ilegivel para quem nao separa as
+   duas, e a regra "slot de grafico nunca carrega estado" vale aqui pelo
+   outro lado: estado nunca vira serie. */
+
+.flow {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  max-width: var(--measure-wide);
+  min-width: 0;
+  font-size: var(--text-13);
+  color: var(--text);
+}
+
+.flow-node {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-10);
+  padding: var(--space-10) var(--space-12);
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-surface);
+  background: var(--surface);
+  --surface-context: var(--surface);
+}
+
+/* a linha que chega. Borda de pseudo, entao ela nao conta como filho */
+.flow-node::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  width: 0;
+  height: var(--space-16);
+  border-left: var(--hairline) solid var(--border);
+}
+.flow-node:first-child::before { content: none; }
+
+.flow > .flow-node + .flow-node,
+.flow > .flow-branch { margin-top: var(--space-16); }
+
+/* o marcador do no: circulo de traco, e o estado mora nele e nao no
+   fundo do cartao. Um cartao inteiro tingido de status vira ruido numa
+   coluna de seis passos. */
+.flow-mark {
+  flex: none;
+  inline-size: var(--text-20);
+  block-size: var(--text-20);
+  border-radius: var(--radius-circle);
+  border: var(--stroke) solid var(--secondary);
+}
+.flow-node[data-kind="trigger"] .flow-mark { border-color: var(--status-good); }
+.flow-node[data-kind="wait"]    .flow-mark { border-color: var(--status-warning); }
+.flow-node[data-kind="stop"]    .flow-mark { border-color: var(--status-critical); }
+
+.flow-label {
+  min-width: 0;
+  font-weight: var(--weight-medium);
+}
+
+.flow-note {
+  margin-left: auto;
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-12);
+  color: var(--muted);
+}
+
+/* ---------- o ramo ----------
+   Duas colunas a partir de um ponto. A haste horizontal e uma borda de
+   topo no proprio contentor, e cada perna desce da sua metade. */
+
+.flow-branch {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-16);
+  padding-top: var(--space-24);
+}
+
+.flow-branch::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 25%;
+  right: 25%;
+  height: var(--space-12);
+  border-top: var(--hairline) solid var(--border);
+  border-left: var(--hairline) solid var(--border);
+  border-right: var(--hairline) solid var(--border);
+}
+
+.flow-leg {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+  min-width: 0;
+}
+
+/* a condicao do ramo em texto, nao so em cor */
+.flow-when {
+  align-self: center;
+  padding: var(--space-2) var(--space-8);
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--bg);
+  --surface-context: var(--bg);
+  font-family: var(--font-mono);
+  font-size: var(--text-11);
+  color: var(--muted);
+}
+
+/* dentro da perna a linha de chegada e mais curta: a haste do ramo ja
+   ocupou o vao de cima */
+.flow-leg .flow-node::before { height: var(--space-16); }
+.flow-leg > :first-child::before { content: none; }
+
+/* abaixo do ponto de quebra o ramo empilha. Duas colunas de 160px num
+   aparelho de 375 sao duas colunas ilegiveis, e a haste horizontal
+   perde o sentido quando as pernas nao ficam lado a lado. */
+@media (max-width: 768px) {
+  .flow-branch { grid-template-columns: 1fr; padding-top: var(--space-16); }
+  .flow-branch::before { content: none; }
+}
+
+/* ---------- movimento ----------
+
+   Cinco quadros novos, todos em transform ou opacity. Nenhum toca
+   layout, nenhum usa filter. */
+
+@keyframes pure-token {
+  from { opacity: 0; transform: translateY(var(--nudge-1)); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pure-caret {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0; }
+}
+
+@keyframes pure-pixel {
+  0%, 100% { opacity: 0.2; }
+  40%      { opacity: 1; }
+}
+
+@keyframes pure-bounce {
+  0%, 100% { transform: scale(0.6); opacity: 0.5; }
+  50%      { transform: scale(1);   opacity: 1; }
+}
+
+@keyframes pure-eq {
+  0%, 100% { transform: scaleY(0.35); }
+  50%      { transform: scaleY(1); }
+}
+
+@keyframes pure-sweep {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
+}
+
+/* movimento reduzido: patterns.css ja derruba tudo. As excecoes sao as
+   mesmas de la, pela mesma razao: carga e progresso nao decoram, eles
+   informam. O que sobra e pulso de opacidade, que nao desloca nada. */
+/* ---------- alvo de toque ----------
+
+   A camada de agente nao tinha bloco de toque nenhum ate 1.5.0, e ela e
+   a camada com MAIS coisa apertavel por tela: aba, filtro, item de
+   menu, opcao de aprovacao, cabeca de rastro. Medidas no toque davam
+   24 a 28px, contra o piso de 44 que a linguagem declara obrigatorio.
+
+   O sinal e pointer: coarse, nunca a largura. Mesma regra do bloco
+   equivalente em patterns.css. */
+
+@media (pointer: coarse) {
+  .tab,
+  .filter,
+  .trace-head,
+  .menu-item,
+  .palette-item,
+  .side-item,
+  .ask-option,
+  .followup,
+  .seg button,
+  .numfield,
+  .selection-bar button {
+    min-height: var(--hit-min-touch);
+  }
+
+  /* a lista longa de comando e de menu ganha altura por preenchimento,
+     nao por altura fixa: um rotulo que quebra em duas linhas nao pode
+     encostar na borda de cima */
+  .menu-item,
+  .palette-item,
+  .side-item {
+    padding-block: var(--space-10);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loader-grid i,
+  .loader-dots i,
+  .loader-orbit,
+  .dictate i {
+    animation: pure-pulse var(--duration-6) var(--ease-standard) infinite alternate !important;
+    animation-duration: var(--duration-6) !important;
+    animation-iteration-count: infinite !important;
+    transform: none !important;
+  }
+  .loader-label::after { animation: none !important; opacity: 0 !important; }
+  .caret { animation: none !important; }
+
+  /* a consulta de movimento reduzido zera a duracao, nao o atraso. Sem
+     esta linha o texto que chega fica invisivel pelo tempo inteiro da
+     escada e depois estoura de uma vez, que e pior que a animacao que
+     ela substitui. */
+  .stream .tok,
+  .code-line,
+  .trace-step,
+  .stagger > * { animation-delay: 0ms !important; }
+}
