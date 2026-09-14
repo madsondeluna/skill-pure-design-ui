@@ -22,7 +22,7 @@ those decisions once so they are not re-taken per screen. The job of this skill
 is to keep every new screen inside those decisions and to find where an existing
 screen left them.
 
-## Read this first: the eleven rules that decide almost everything
+## Read this first: the twelve rules that decide almost everything
 
 These fail a build or a review. Everything else is refinement.
 
@@ -39,6 +39,7 @@ These fail a build or a review. Everything else is refinement.
 | 9 | State is `--status-*`, series is `--chart-1..8` in order, never cycled, never swapped. `--secondary` is a border colour, never text | tokens |
 | 10 | Hit area 24px always, 44px under `pointer: coarse`, decided by input and never by width. Focus ring visible on `:focus-visible`; `outline: none` without replacement never | `--hit-min*`, `--focus-ring` |
 | 11 | Reduced motion collapses every duration and delay, including staggered entrances. Motion is never the only feedback channel | `prefers-reduced-motion` |
+| 12 | Glass and the light layer ship with every page, as on madsondeluna.com: `light.css` and `light.js` are always linked, the app root is `.lit-field` with `data-lit`, pills are `pill glass lit lit-swell`, carrying cards are `card-glass lit`, the panel that carries the experiment is `glass glass-frost lit lit-edge`. A build with flat `.surface` boxes and no light layer is not in the language. The cursor lens is the exception: `.lit-cursor-only` and `.lit-cursor` are opt-in per request, never a default, because replacing the system pointer reads as machine-made and costs the I-beam and the hand | `light.css`, `materials.md` |
 
 ## Decide what the user needs
 
@@ -81,8 +82,8 @@ python3 scripts/scaffold.py <project-dir> [--no-light] [--no-motion] [--no-agent
 ```
 
 Link order is mandatory: `tokens.css`, `patterns.css`, `light.css`, `motion.css`,
-`agent.css`, then `light.js` deferred. `light.css` and `light.js` only if
-something reacts to the pointer; `motion.css` only if a named recipe is used;
+`agent.css`, then `light.js` deferred. `light.css` and `light.js` are part of
+every page (rule 12); `motion.css` only if a named recipe is used;
 `agent.css` only if a model writes to the screen. Tailwind v4 imports
 `web/theme.css`, which already pulls `tokens.css`. The template carries the fonts
 (Archivo 300 at width 125, Public Sans 300 to 600, Spline Sans Mono 400 and 500),
