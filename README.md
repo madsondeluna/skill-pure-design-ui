@@ -7,6 +7,9 @@ An agent skill for building, reviewing and polishing interfaces in Pure Design, 
 | madsondeluna/pure-design-language | tokens, four modes, glass and liquid materials, the light layer, 23 motion recipes, the agent-UI layer, the icon sprite, the matplotlib and plotly themes, the craft rules and the twelve review routines |
 | madsondeluna/make-interfaces-feel-better | the polish details: concentric radius, optical alignment, layered shadows, interruptible motion, tabular numbers, icon weight, hit areas, performance |
 | madsondeluna/taste-skill (soft-skill) | the agency-grade taste: anti-defaults, vibe by mode, composition by axis, the bezel, the island button, the detached nav, the pre-output checklist |
+| ui.halaska.com | the AI product patterns in five groups: plan preview, autonomy, permissions, receipts, checkpoints, audit log, diff view, digest, notification center |
+| bencho.dev | gesture blocks by behaviour: slide to confirm, inline confirm, radial menu, reorder, drag stepper, selection highlight |
+| torph.lochie.me | text morph and place-value number morph, configured on the duration and curve tokens |
 
 Where the sources disagree, Pure Design wins and the principle of the other source is kept, expressed as a token. Every reconciliation is written down in the references.
 

@@ -110,7 +110,9 @@ checkmarks, clocks or media controls.
 ## agent.css
 
 Twenty components for interfaces where a model writes to the screen. Depends on
-`tokens.css` and `patterns.css`. Adds no colour.
+`tokens.css` and `patterns.css`. Adds no colour. The patterns an AI product
+builds from them (plan preview, autonomy, receipts, checkpoints, diff view,
+digest) are in `agent-patterns.md`.
 
 | # | Component | Classes |
 |---|---|---|

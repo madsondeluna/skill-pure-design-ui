@@ -5,9 +5,9 @@ license: MIT
 compatibility: Works standalone. Best with Node 18+ (tools/check.mjs), Python 3.9+ (scripts), a Figma MCP connection for design files, and a browser tool for rendered audits.
 metadata:
   author: Madson A. de Luna Aragao
-  version: 1.0.0
+  version: 1.1.0
   language-version: Pure Design 1.6.0
-  sources: madsondeluna/pure-design-language, madsondeluna/make-interfaces-feel-better, madsondeluna/taste-skill (soft-skill)
+  sources: madsondeluna/pure-design-language, madsondeluna/make-interfaces-feel-better, madsondeluna/taste-skill (soft-skill), ui.halaska.com (agent patterns), bencho.dev (gesture blocks), torph.lochie.me (text morph)
 ---
 
 # Pure Design UI
@@ -49,6 +49,9 @@ These fail a build or a review. Everything else is refinement.
 | Build a Streamlit, matplotlib, plotly, seaborn figure | Apply the Python theme, series in slot order, three-series cap on scatter | `references/python-charts.md` |
 | Add glass, liquid, pointer light, a hover effect | Pick the texture by surface size, never stack two translucent layers | `references/materials.md` |
 | Add animation, transitions, a loader, a toast | Pick the recipe from `motion.css`; tokenise by use, not by number | `references/motion.md` |
+| Text that morphs in place, a rolling number, a status phase label | `.motion-text-swap` for two fixed labels; torph on the tokens for arbitrary strings and place-value numbers | `references/motion.md` |
+| Slide to confirm, radial menu, reorder, drag stepper, a gesture block | Keep the read, re-express on the tokens, give it a keyboard path; no overshoot, no layout transition | `references/motion.md` |
+| An AI product flow beyond one component: plan, autonomy, permissions, receipts, checkpoints, diff, digest, notifications | Pick the group first (conversation, trust, control, output, ambient), then compose the pattern from existing classes | `references/agent-patterns.md`, `references/components.md` |
 | Review, polish, "what is wrong", "feels off", "roda o pure" | Run the polish routine at both widths, report by severity | `references/review-routines.md` |
 | Contrast, WCAG, readable | Contrast sweep with hidden states forced, four modes | `references/review-routines.md`, `scripts/contrast.py` |
 | Spacing, grid, padding | Spacing audit: three steps, two axes | `references/review-routines.md` |
@@ -209,9 +212,10 @@ follows the language of the conversation.
 |---|---|
 | `references/tokens.md` | Choosing any colour, type size, space, radius, duration or curve; the modes; the data palette |
 | `references/materials.md` | Glass, liquid, the light layer, the cursor lens; anything translucent or pointer-reactive |
-| `references/motion.md` | Any transition, entrance, exit, loader, icon swap; mapping loose durations to tokens; the Motion library rules |
+| `references/motion.md` | Any transition, entrance, exit, loader, icon swap; mapping loose durations and curves to tokens; the Motion library rules; gesture blocks; text morph with torph |
 | `references/craft-rules.md` | Keyboard, focus, hit area, forms, state, navigation, layout, text, delivery, narrow screen |
 | `references/components.md` | The class vocabulary of `patterns.css`, the agent layer, the icon sprite |
+| `references/agent-patterns.md` | AI product patterns in five groups (conversation, trust, control, output, ambient), each composed from existing classes with radius, colour and craft |
 | `references/polish-details.md` | Concentric radius, optical alignment, shadows, typography rendering, icon weight, performance, and how each reconciles with the tokens |
 | `references/taste.md` | Building something that must read as premium: anti-defaults, vibe by mode, composition by axis, bezel, island button, detached nav, scroll reveal, the pre-output checklist |
 | `references/review-routines.md` | The twelve routines with their method, traps and output |
